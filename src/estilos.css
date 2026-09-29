@@ -409,6 +409,8 @@ input { font-family: inherit; }
 .opcion .figura { width: clamp(72px, 13vw, 106px); height: auto; }
 .opcion .etiqueta { font-size: 17px; font-weight: 800; line-height: 1.25; }
 .opcion.bloqueada { cursor: default; }
+/* "Gastronomia" y debajo "comidas": la palabra del libro y lo que quiere decir. */
+.opcion .aclara { display: block; font-size: .72em; font-weight: 700; opacity: .75; }
 .opcion.correcta { border-color: var(--verde); background: var(--verde-claro); animation: brincar .5s; }
 .opcion.errada { border-color: var(--rojo); background: var(--rojo-claro); animation: temblar .4s; }
 .opcion.marcada { border-color: var(--rosa); background: var(--rosa-claro); transform: scale(.97); }
@@ -527,6 +529,9 @@ input { font-family: inherit; }
 }
 .aviso.bien { color: #0B7A5A; animation: brincar .45s; }
 .aviso.mal { color: #A81C1C; }
+/* Tras un error en modo normal: la pista espera a que ella decida seguir. */
+.aviso .btn-seguir { margin-top: 4px; }
+
 .aviso .pista {
   font-size: clamp(14px, 1.9vw, 17px);
   font-weight: 700;
@@ -1092,7 +1097,7 @@ input { font-family: inherit; }
 
   /* --- Aviso y pista: tienen que caber, es donde se explica el error --- */
   .aviso { font-size: 17px; max-width: 100%; }
-  .aviso .pista { font-size: 13.5px; padding: 7px 12px; line-height: 1.4; }
+  .aviso .pista { font-size: 15px; padding: 8px 12px; line-height: 1.4; }
 
   /* --- Final de zona --- */
   .fiesta { gap: 11px; padding: 12px 0; }

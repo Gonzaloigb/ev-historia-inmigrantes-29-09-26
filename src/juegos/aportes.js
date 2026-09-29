@@ -8,36 +8,44 @@
  *   A. Verdadero o falso sobre un aporte. (Formato literal de la evaluacion.)
  *   B. Un club de futbol → que comunidad lo formo.
  *   C. Emparejar: de estos tres aportes, cual es de tal comunidad.
+ *
+ * Ocho preguntas, cada formato con su bolsa: ninguna se repite en la vuelta.
  */
 
-import { PASADO, comunidad, CLUBES, AFIRMACIONES, pistaDeError, AVISOS } from '../datos.js';
+import { PASADO, comunidad, CLUBES, AFIRMACIONES, pistaDeError, AVISOS, REGLA_TODOS } from '../datos.js';
 import { dibujo, DIBUJO_DE } from '../dibujos.js';
-import { el, barajar, uno } from '../util.js';
+import { el, barajar, uno, bolsa, elegirCon } from '../util.js';
 import { correrZona } from '../motor.js';
 
-const TOTAL = 10;
+const GUION = ['vf', 'emparejar', 'vf', 'club', 'vf', 'emparejar', 'vf', 'club'];
 
 /* Solo las afirmaciones sobre comunidades del pasado y sus aportes. */
 const VF_APORTES = AFIRMACIONES.filter((a) =>
   ['alemanes', 'ingleses', 'arabes', 'afrodescendientes'].includes(a.concepto));
 
+/* Las comunidades a las que el libro atribuye un aporte. Los afrodescendientes
+   quedan fuera: "mantienen sus costumbres ancestrales" y "los arabes conservan
+   sus tradiciones" dicen casi lo mismo, y a los 7 anos no se distinguen.     */
+const CON_APORTE = PASADO.filter((c) => c.aporteClave);
+
 export function jugarAportes({ zona, onSalir, onFin, modo }) {
-  let bolsaVF = [];
-  const sacarVF = () => {
-    if (!bolsaVF.length) bolsaVF = barajar(VF_APORTES);
-    return bolsaVF.pop();
-  };
+  const sacarVF = bolsa(VF_APORTES);
+  const sacarClub = bolsa(CLUBES);
+  const sacarComunidad = bolsa(CON_APORTE);
 
   correrZona({
     zona,
-    total: TOTAL,
+    total: GUION.length,
     onSalir,
     onFin,
     modo,
     montar(ctx, i) {
-      if (i === 3 || i === 8) montarClub(ctx);
-      else if (i % 2 === 0) montarVF(ctx, sacarVF());
-      else montarEmparejar(ctx);
+      switch (GUION[i]) {
+        case 'vf': return montarVF(ctx, sacarVF());
+        case 'club': return montarClub(ctx, sacarClub());
+        case 'emparejar': return montarEmparejar(ctx, sacarComunidad());
+        default: throw new Error(`Formato desconocido: ${GUION[i]}`);
+      }
     },
   });
 }
@@ -47,7 +55,9 @@ export function jugarAportes({ zona, onSalir, onFin, modo }) {
 function montarVF(ctx, a) {
   ctx.pedir({
     instruccion: '¿Es verdadero o falso?',
-    apoyo: 'Lee con atención: a veces el error está en una sola palabra.',
+    apoyo: a.concepto === 'generalizar'
+      ? REGLA_TODOS
+      : 'Lee con atención: a veces el error está en una sola palabra.',
   });
 
   ctx.zonaJuego.append(el('div', 'afirmacion', a.texto));
@@ -62,6 +72,11 @@ function montarVF(ctx, a) {
 
       const acerto = op.v === a.verdadero;
       btn.classList.add(acerto ? 'correcta' : 'errada');
+      // Son dos opciones: si se equivoco, la otra es la correcta. Se marca
+      // en verde, como en las demas preguntas.
+      if (!acerto) {
+        [...opciones.children].find((o) => o !== btn)?.classList.add('correcta');
+      }
 
       ctx.responder({
         acerto,
@@ -77,8 +92,7 @@ function montarVF(ctx, a) {
 }
 
 /* ---------- Formato B: los clubes de futbol ---------- */
-function montarClub(ctx) {
-  const c = uno(CLUBES);
+function montarClub(ctx, c) {
   const dueno = comunidad(c.de);
 
   ctx.pedir({
@@ -90,8 +104,9 @@ function montarClub(ctx) {
   tarjeta.innerHTML = dibujo('pelota');
   ctx.zonaJuego.append(tarjeta);
 
+  // Normal: tres alternativas. Dificil: las cuatro.
   const opciones = el('div', 'opciones dos');
-  for (const op of barajar(PASADO)) {
+  for (const op of elegirCon(PASADO, dueno, ctx.opciones)) {
     const btn = el('button', 'opcion solo-texto', op.corto,
       { type: 'button', 'data-id': op.id });
 
@@ -120,12 +135,11 @@ function montarClub(ctx) {
 }
 
 /* ---------- Formato C: cual de estos aportes es de tal comunidad ---------- */
-function montarEmparejar(ctx) {
-  const c = uno(PASADO);
+function montarEmparejar(ctx, c) {
   const correcto = uno(c.aportes);
   const otros = barajar(
-    PASADO.filter((x) => x.id !== c.id).flatMap((x) => x.aportes),
-  ).slice(0, 2);
+    CON_APORTE.filter((x) => x.id !== c.id).flatMap((x) => x.aportes),
+  ).slice(0, ctx.opciones - 1);
   const cartas = barajar([correcto, ...otros]);
 
   ctx.pedir({ instruccion: `¿Cuál de estos es un aporte de los ${c.corto.toLowerCase()}?` });

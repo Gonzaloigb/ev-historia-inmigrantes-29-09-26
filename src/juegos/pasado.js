@@ -10,50 +10,55 @@
  *   B. Por que llegaron a Chile.
  *   C. De que continente vienen. (Arabes = Asia, el error mas probable.)
  *   D. Donde se instalaron.
+ *
+ * Ocho preguntas y no diez: con cuatro comunidades, diez obligaba a repetir.
+ * Cada formato saca de su propia bolsa, asi que ninguna pregunta sale dos
+ * veces en la misma vuelta.
  */
 
-import { PASADO, comunidad, pistaDeError, AVISOS } from '../datos.js';
+import { PASADO, pistaDeError, AVISOS } from '../datos.js';
 import { dibujo, DIBUJO_DE } from '../dibujos.js';
-import { el, barajar, uno } from '../util.js';
+import { el, barajar, uno, bolsa, elegirCon } from '../util.js';
 import { correrZona } from '../motor.js';
 
-const TOTAL = 10;
+const GUION = ['quien', 'porque', 'quien', 'continente', 'porque', 'quien', 'donde', 'porque'];
 
 export function jugarPasado({ zona, onSalir, onFin, modo }) {
-  let bolsa = [];
-  const sacar = () => {
-    if (!bolsa.length) bolsa = barajar(PASADO);
-    return bolsa.pop();
-  };
+  // Solo las comunidades a las que el libro les atribuye un aporte (las tres
+  // del crucigrama de la p.95), y solo los continentes que el libro dice.
+  const sacarQuien = bolsa(PASADO.filter((c) => c.aporteClave));
+  const sacarPorQue = bolsa(PASADO);
+  const sacarContinente = bolsa(PASADO.filter((c) => c.preguntaContinente));
 
   correrZona({
     zona,
-    total: TOTAL,
+    total: GUION.length,
     onSalir,
     onFin,
     modo,
     montar(ctx, i) {
-      if (i % 4 === 1) montarPorQue(ctx, sacar());
-      else if (i % 4 === 2) montarContinente(ctx, sacar());
-      else if (i === 7) montarDonde(ctx);
-      else montarDeQuienEs(ctx, sacar());
+      switch (GUION[i]) {
+        case 'quien': return montarDeQuienEs(ctx, sacarQuien());
+        case 'porque': return montarPorQue(ctx, sacarPorQue());
+        case 'continente': return montarContinente(ctx, sacarContinente());
+        case 'donde': return montarDonde(ctx);
+        default: throw new Error(`Formato desconocido: ${GUION[i]}`);
+      }
     },
   });
 }
 
 /* ---------- Formato A: este aporte, de que comunidad es ---------- */
 function montarDeQuienEs(ctx, c) {
-  ctx.pedir({
-    instruccion: `¿Qué comunidad de inmigrantes aportó ${c.aporteClave}?`,
-    apoyo: 'Afrodescendientes, alemanes, ingleses y árabes llegaron a Chile en el pasado.',
-  });
+  ctx.pedir({ instruccion: `¿Qué comunidad de inmigrantes aportó ${c.aporteClave}?` });
 
   const tarjeta = el('div', 'tarjeta-dibujo');
   tarjeta.innerHTML = dibujo(DIBUJO_DE[c.id]);
   ctx.zonaJuego.append(tarjeta);
 
+  // Normal: tres alternativas. Dificil: las cuatro.
   const opciones = el('div', 'opciones dos');
-  for (const op of barajar(PASADO)) {
+  for (const op of elegirCon(PASADO, c, ctx.opciones)) {
     const btn = el('button', 'opcion solo-texto', op.corto,
       { type: 'button', 'data-id': op.id });
 
@@ -86,12 +91,12 @@ function montarPorQue(ctx, c) {
   tarjeta.innerHTML = dibujo(DIBUJO_DE[c.id]);
   ctx.zonaJuego.append(tarjeta);
 
-  const otros = barajar(PASADO.filter((x) => x.id !== c.id)).slice(0, 2);
-  const cartas = barajar([c, ...otros]);
-
+  // Las alternativas van en su version corta ("Por negocios"): la frase entera
+  // del libro son veinte palabras, demasiado para leer tres a los 7 anos. La
+  // frase entera aparece como explicacion si se equivoca.
   const opciones = el('div', 'opciones lista');
-  for (const op of cartas) {
-    const btn = el('button', 'opcion solo-texto', op.porQue,
+  for (const op of elegirCon(PASADO, c, ctx.opciones)) {
+    const btn = el('button', 'opcion solo-texto', op.porQueCorto,
       { type: 'button', 'data-id': op.id });
 
     btn.addEventListener('click', () => {
@@ -106,7 +111,7 @@ function montarPorQue(ctx, c) {
         acerto,
         concepto: c.id,
         mensajeBien: uno(AVISOS.bien),
-        mensajeMal: c.porQue,
+        mensajeMal: `${c.porQueCorto}.`,
         pista: pistaDeError(op.id, c.id) || c.porQue,
       });
     });
@@ -117,11 +122,16 @@ function montarPorQue(ctx, c) {
 
 /* ---------- Formato C: de que continente vienen ----------
    Existe por un error concreto: "arabe" se asocia a Africa por el norte del
-   continente, pero Palestina, Siria y Libano estan en Asia.                */
+   continente, pero Palestina, Siria y Libano estan en Asia.
+
+   Solo se pregunta por las comunidades cuyo continente dice el libro
+   (arabes y afrodescendientes). Que Alemania o Inglaterra esten en Europa no
+   lo ensena la leccion.                                                    */
 function montarContinente(ctx, c) {
   ctx.pedir({
-    instruccion: `Los ${c.corto.toLowerCase()} venían de ${c.origen_geo}. `
-               + '¿De qué continente es eso?',
+    instruccion: c.preguntaContinente,
+    // El apoyo no puede ser "venian de Africa": eso es la respuesta.
+    apoyo: c.origen_geo !== c.continente ? `Venían de ${c.origen_geo}.` : '',
   });
 
   const opciones = el('div', 'opciones tres');
@@ -143,9 +153,11 @@ function montarContinente(ctx, c) {
         acerto,
         concepto: c.id,
         mensajeBien: uno(AVISOS.bien),
-        mensajeMal: `${c.origen_geo} está en ${c.continente}.`,
+        mensajeMal: `Venían de ${c.continente}.`,
         pista: pistaDeError(cont, c.continente)
-          || `Los ${c.corto.toLowerCase()} venían de ${c.origen_geo}, en ${c.continente}.`,
+          || (c.origen_geo !== c.continente
+            ? `Venían de ${c.origen_geo}, que está en ${c.continente}.`
+            : `Las expediciones españolas los trajeron desde ${c.continente}.`),
       });
     });
     opciones.append(btn);

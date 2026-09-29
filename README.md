@@ -37,7 +37,13 @@ npm install
 npm run dev      # servidor con recarga en vivo
 npm run build    # compila a dist/index.html, en UN solo archivo
 python verificar.py --todos   # prueba de humo en WebKit y Chromium
+python probar_preguntas.py    # que no se repitan preguntas y sean de 2° básico
 ```
+
+`probar_preguntas.py` juega cada zona varias vueltas y falla si una pregunta se
+repite en la misma vuelta, si una alternativa es demasiado larga o si el modo
+normal ofrece más de 3 alternativas. Además escribe `preguntas.txt` con todas
+las preguntas y su respuesta, para revisarlas contra el libro.
 
 El build produce un único HTML autocontenido a propósito, para que funcione al
 abrirlo con doble clic (`file://`), donde los navegadores bloquean los módulos ES.

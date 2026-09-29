@@ -8,14 +8,16 @@
  *   A. Un ejemplo concreto → a que ambito pertenece.
  *   B. Que significa "sociedad multicultural".
  *   C. Verdadero o falso sobre los aportes actuales.
+ *
+ * Ocho preguntas. La definicion sale UNA vez: antes salia dos, identica.
  */
 
-import { AMBITOS, MULTICULTURAL, AFIRMACIONES, AVISOS } from '../datos.js';
+import { AMBITOS, MULTICULTURAL, AFIRMACIONES, AVISOS, REGLA_TODOS } from '../datos.js';
 import { dibujo, DIBUJO_AMBITO } from '../dibujos.js';
-import { el, barajar, uno } from '../util.js';
+import { el, barajar, uno, bolsa } from '../util.js';
 import { correrZona } from '../motor.js';
 
-const TOTAL = 10;
+const GUION = ['ambito', 'vf', 'ambito', 'definicion', 'ambito', 'vf', 'ambito', 'vf'];
 
 /* Ejemplos concretos, cada uno de un solo ambito. */
 const EJEMPLOS = [
@@ -32,27 +34,22 @@ const VF_MULTI = AFIRMACIONES.filter((a) =>
   ['gastronomia', 'multicultural', 'generalizar'].includes(a.concepto));
 
 export function jugarMulticultural({ zona, onSalir, onFin, modo }) {
-  let bolsa = [];
-  const sacar = () => {
-    if (!bolsa.length) bolsa = barajar(EJEMPLOS);
-    return bolsa.pop();
-  };
-  let bolsaVF = [];
-  const sacarVF = () => {
-    if (!bolsaVF.length) bolsaVF = barajar(VF_MULTI);
-    return bolsaVF.pop();
-  };
+  const sacar = bolsa(EJEMPLOS);
+  const sacarVF = bolsa(VF_MULTI);
 
   correrZona({
     zona,
-    total: TOTAL,
+    total: GUION.length,
     onSalir,
     onFin,
     modo,
     montar(ctx, i) {
-      if (i === 2 || i === 7) montarDefinicion(ctx);
-      else if (i % 3 === 1) montarVF(ctx, sacarVF());
-      else montarQueAmbito(ctx, sacar());
+      switch (GUION[i]) {
+        case 'ambito': return montarQueAmbito(ctx, sacar());
+        case 'vf': return montarVF(ctx, sacarVF());
+        case 'definicion': return montarDefinicion(ctx);
+        default: throw new Error(`Formato desconocido: ${GUION[i]}`);
+      }
     },
   });
 }
@@ -69,9 +66,12 @@ function montarQueAmbito(ctx, e) {
   tarjeta.innerHTML = dibujo(DIBUJO_AMBITO[e.ambito]);
   ctx.zonaJuego.append(tarjeta);
 
+  // La palabra del libro siempre; en modo normal, debajo, que quiere decir.
   const opciones = el('div', 'opciones tres');
   for (const a of barajar(AMBITOS)) {
-    const btn = el('button', 'opcion solo-texto', `${a.icono} ${a.nombre}`,
+    const texto = `${a.icono} ${a.nombre}`
+      + (ctx.ayuda ? `<small class="aclara">${a.simple}</small>` : '');
+    const btn = el('button', 'opcion solo-texto', texto,
       { type: 'button', 'data-id': a.id });
 
     btn.addEventListener('click', () => {
@@ -143,7 +143,9 @@ function montarDefinicion(ctx) {
 function montarVF(ctx, a) {
   ctx.pedir({
     instruccion: '¿Es verdadero o falso?',
-    apoyo: 'Lee con atención: a veces el error está en una sola palabra.',
+    apoyo: a.concepto === 'generalizar'
+      ? REGLA_TODOS
+      : 'Lee con atención: a veces el error está en una sola palabra.',
   });
 
   ctx.zonaJuego.append(el('div', 'afirmacion', a.texto));
@@ -158,6 +160,11 @@ function montarVF(ctx, a) {
 
       const acerto = op.v === a.verdadero;
       btn.classList.add(acerto ? 'correcta' : 'errada');
+      // Son dos opciones: si se equivoco, la otra es la correcta. Se marca
+      // en verde, como en las demas preguntas.
+      if (!acerto) {
+        [...opciones.children].find((o) => o !== btn)?.classList.add('correcta');
+      }
 
       ctx.responder({
         acerto,

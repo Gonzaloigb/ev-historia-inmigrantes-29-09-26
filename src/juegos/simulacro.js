@@ -10,37 +10,57 @@
  * normal: aqui la idea es medir, no ensenar. No quita vidas — perder el ensayo
  * a la tercera no le ensena nada a nadie.
  *
- * El reparto sigue el peso de cada contenido en la leccion:
- *   5 verdadero/falso · 3 comunidades del pasado · 3 del presente ·
- *   2 aportes y multiculturalidad · 2 respeto
+ * El reparto sigue el peso de cada contenido en la leccion, con el V/F
+ * primero porque es el formato de la ficha:
+ *   4 verdadero/falso · 2 comunidades del pasado · 2 del presente ·
+ *   1 aportes y multiculturalidad · 1 respeto
+ *
+ * Diez preguntas y no quince: quince era largo para 2° basico, y con un
+ * temario tan acotado obligaba a repetir. Cada tipo saca de su bolsa.
  */
 
 import {
   AFIRMACIONES, PASADO, NINOS, AMBITOS, ACCIONES,
-  PAISES_PRESENTE, comunidad, AVISOS,
+  GRUPOS_CUANDO, AVISOS,
 } from '../datos.js';
 import { dibujo, DIBUJO_DE, DIBUJO_AMBITO } from '../dibujos.js';
-import { el, barajar, uno } from '../util.js';
+import { el, barajar, uno, bolsa } from '../util.js';
 import { correrZona } from '../motor.js';
 import { guardarSimulacro } from '../estado.js';
 
-const TOTAL = 15;
+/* Las preguntas de pasado que el libro respalda: el aporte de las tres
+   comunidades del crucigrama, y el continente de las dos que el libro dice. */
+const PREGUNTAS_PASADO = [
+  ...PASADO.filter((c) => c.aporteClave).map((c) => ({ tipo: 'aporte', c })),
+  ...PASADO.filter((c) => c.preguntaContinente).map((c) => ({ tipo: 'continente', c })),
+];
+
+/* Las del presente: el saludo solo de quien saluda en otro idioma, el idioma
+   de los cuatro, y dos de pasado-o-presente. */
+const PREGUNTAS_PRESENTE = [
+  ...NINOS.filter((n) => n.saludoDistinto).map((n) => ({ tipo: 'saludo', n })),
+  ...NINOS.map((n) => ({ tipo: 'idioma', n })),
+  { tipo: 'cuando' }, { tipo: 'cuando' },
+];
 
 export function jugarSimulacro({ zona, onSalir, onFin, modo }) {
   const guion = barajar([
-    'vf', 'vf', 'vf', 'vf', 'vf',
-    'pasado', 'pasado', 'pasado',
-    'presente', 'presente', 'presente',
-    'aportes', 'aportes',
-    'respeto', 'respeto',
+    'vf', 'vf', 'vf', 'vf',
+    'pasado', 'pasado',
+    'presente', 'presente',
+    'aportes',
+    'respeto',
   ]);
 
-  // Bolsa de afirmaciones, para que no se repitan dentro de un mismo ensayo.
-  let bolsaVF = barajar(AFIRMACIONES);
+  // Una bolsa por tipo, para que nada se repita dentro de un mismo ensayo.
+  const sacarVF = bolsa(AFIRMACIONES);
+  const sacarPasado = bolsa(PREGUNTAS_PASADO);
+  const sacarPresente = bolsa(PREGUNTAS_PRESENTE);
+  const sacarGrupo = bolsa(GRUPOS_CUANDO);
 
   correrZona({
     zona,
-    total: TOTAL,
+    total: guion.length,
     onSalir,
     modo,
     forzarDuro: true,
@@ -50,12 +70,9 @@ export function jugarSimulacro({ zona, onSalir, onFin, modo }) {
     },
     montar(ctx, i) {
       switch (guion[i]) {
-        case 'vf': {
-          if (!bolsaVF.length) bolsaVF = barajar(AFIRMACIONES);
-          return preguntaVF(ctx, bolsaVF.pop());
-        }
-        case 'pasado': return preguntaPasado(ctx);
-        case 'presente': return preguntaPresente(ctx);
+        case 'vf': return preguntaVF(ctx, sacarVF());
+        case 'pasado': return preguntaPasado(ctx, sacarPasado());
+        case 'presente': return preguntaPresente(ctx, sacarPresente(), sacarGrupo);
         case 'aportes': return preguntaAportes(ctx);
         case 'respeto': return preguntaRespeto(ctx);
         default: throw new Error(`Pregunta desconocida: ${guion[i]}`);
@@ -112,11 +129,8 @@ function preguntaVF(ctx, a) {
 }
 
 /* ---------- 2. Comunidades del pasado ---------- */
-function preguntaPasado(ctx) {
-  const c = uno(PASADO);
-  const porAporte = Math.random() < 0.6;
-
-  if (porAporte) {
+function preguntaPasado(ctx, { tipo, c }) {
+  if (tipo === 'aporte') {
     ctx.pedir({ instruccion: `¿Qué comunidad aportó ${c.aporteClave}?` });
     const t = el('div', 'tarjeta-dibujo chica');
     t.innerHTML = dibujo(DIBUJO_DE[c.id]);
@@ -132,40 +146,38 @@ function preguntaPasado(ctx) {
     return;
   }
 
-  ctx.pedir({
-    instruccion: `Los ${c.corto.toLowerCase()} venían de ${c.origen_geo}. `
-               + '¿De qué continente?',
-  });
+  ctx.pedir({ instruccion: c.preguntaContinente });
   armar(ctx, {
     cartas: [{ texto: 'África' }, { texto: 'Europa' }, { texto: 'Asia' }],
     esCorrecta: (x) => x.texto === c.continente,
     clase: 'tres',
     concepto: c.id,
-    mensajeMal: `${c.origen_geo} está en ${c.continente}.`,
+    mensajeMal: `Venían de ${c.continente}.`,
   });
 }
 
 /* ---------- 3. Comunidades del presente ---------- */
-function preguntaPresente(ctx) {
-  const n = uno(NINOS);
-  const tipo = Math.random();
-
-  // 3a: de que pais viene
-  if (tipo < 0.4) {
-    ctx.pedir({ instruccion: `Alguien te saluda diciendo “${n.saludo}”. ¿De dónde viene?` });
+function preguntaPresente(ctx, { tipo, n }, sacarGrupo) {
+  // 3a: de que pais es el saludo
+  if (tipo === 'saludo') {
+    ctx.pedir({
+      instruccion: `Alguien te saluda diciendo “${n.saludo}”. ¿De qué país es ese saludo?`,
+    });
     armar(ctx, {
       cartas: barajar(NINOS).map((x) => ({ texto: x.pais, id: x.id })),
       esCorrecta: (x) => x.id === n.id,
       clase: 'dos',
       concepto: n.idioma === 'creole' ? 'creole' : n.id,
-      mensajeMal: `Es ${n.nombre}, de ${n.pais}.`,
+      mensajeMal: `Es el saludo de ${n.nombre}: ${n.pais}.`,
     });
     return;
   }
 
   // 3b: que idioma habla
-  if (tipo < 0.7) {
-    ctx.pedir({ instruccion: `${n.nombre} viene de ${n.pais}. ¿Qué idioma habla en su casa?` });
+  if (tipo === 'idioma') {
+    // Yun nacio en Chile: para ella, "viene de China" seria falso.
+    const origen = n.paisNota || `${n.nombre} viene de ${n.pais}.`;
+    ctx.pedir({ instruccion: `${origen} ¿Qué idioma habla en su casa?` });
     armar(ctx, {
       cartas: [{ texto: 'creole' }, { texto: 'español' }, { texto: 'chino' }],
       esCorrecta: (x) => x.texto === n.idioma,
@@ -177,10 +189,7 @@ function preguntaPresente(ctx) {
   }
 
   // 3c: pasado o presente
-  const esPasado = Math.random() < 0.5;
-  const grupo = esPasado
-    ? uno(PASADO).corto
-    : uno(Object.values(PAISES_PRESENTE).flat());
+  const { texto: grupo, esPasado } = sacarGrupo();
 
   ctx.pedir({
     instruccion: esPasado

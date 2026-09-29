@@ -33,8 +33,13 @@ export const PASADO = [
     continente: 'África',
     porQue: 'Fueron traídos por las expediciones españolas en condición de esclavitud. '
           + 'Tiempo después se prohibió la esclavitud y pudieron ser libres.',
+    porQueCorto: 'Los trajeron en esclavitud, sin su libertad',
     aportes: ['Mantienen sus costumbres ancestrales', 'El Baile de Morenos de Paso'],
-    aporteClave: 'sus costumbres ancestrales',
+    // Sin aporte preguntable: el libro los describe ("mantienen sus costumbres
+    // ancestrales"), no les atribuye un aporte como a los otros tres. Y el
+    // crucigrama de la p.95 solo pregunta por alemanes, ingleses y arabes.
+    aporteClave: null,
+    preguntaContinente: '¿De qué continente trajeron a las personas afrodescendientes?',
     donde: null,
     color: '#B45309',
     icono: '🪘',
@@ -46,8 +51,11 @@ export const PASADO = [
     origen_geo: 'Alemania',
     continente: 'Europa',
     porQue: 'Llegaron gracias a una ley de inmigración que existió en Chile.',
+    porQueCorto: 'Por una ley de inmigración',
     aportes: ['La arquitectura de sus viviendas', 'Comidas y pasteles, como los kuchenes'],
     aporteClave: 'la arquitectura y los kuchenes',
+    // El libro no dice de que continente es Alemania: no se pregunta.
+    preguntaContinente: null,
     donde: 'la Zona Sur del país',
     color: '#CA8A04',
     icono: '🏡',
@@ -59,8 +67,10 @@ export const PASADO = [
     origen_geo: 'Inglaterra',
     continente: 'Europa',
     porQue: 'Llegaron principalmente por temas de negocios.',
+    porQueCorto: 'Por negocios',
     aportes: ['Las primeras compañías de bomberos voluntarios', 'La difusión del fútbol'],
     aporteClave: 'el fútbol y los bomberos',
+    preguntaContinente: null,
     donde: 'Punta Arenas, Valparaíso, Santiago y Antofagasta',
     color: '#1D4ED8',
     icono: '⚽',
@@ -72,9 +82,14 @@ export const PASADO = [
     origen_geo: 'Palestina, Siria y Líbano',
     continente: 'Asia',   // ojo: NO Africa. Es el error mas probable.
     porQue: 'Llegaron por dificultades en sus países de origen.',
+    porQueCorto: 'Por dificultades en sus países',
+    // "Conservan sus tradiciones y creencias" NO va aqui: el libro lo cuenta
+    // de ellos, pero no como un aporte a Chile. Los clubes si (p.94).
     aportes: ['El comercio y la industria, especialmente de telas',
-              'Conservan sus tradiciones y creencias religiosas'],
+              'Clubes deportivos, como Palestino'],
     aporteClave: 'el comercio de telas',
+    // El libro lo dice explicito (p.94): "paises de Asia, como Palestina...".
+    preguntaContinente: '¿De qué continente venían los árabes?',
     donde: null,
     color: '#15803D',
     icono: '🧵',
@@ -106,6 +121,20 @@ export const PAISES_PRESENTE = {
 };
 
 /**
+ * Para preguntar "¿llegaron en el pasado o en los ultimos anos?".
+ *
+ * Espana queda fuera: el libro la nombra entre los inmigrantes recientes
+ * (p.96), pero los espanoles tambien llegaron en el pasado — es la Leccion 1,
+ * que Marina ya estudio. La pregunta tendria dos respuestas.
+ */
+export const GRUPOS_CUANDO = [
+  ...PASADO.map((c) => ({ texto: c.corto, esPasado: true })),
+  ...Object.values(PAISES_PRESENTE).flat()
+    .filter((p) => p !== 'España')
+    .map((p) => ({ texto: p, esPasado: false })),
+];
+
+/**
  * Los cuatro ninos del libro. Son material directo de prueba: la ficha de la
  * p.99 pide escoger a uno de ellos.
  */
@@ -116,6 +145,10 @@ export const NINOS = [
     pais: 'Haití',
     continente: 'América',
     saludo: 'Bonjou, koman ou ye?',
+    // Solo los saludos en otro idioma dicen de donde viene alguien. "Hola,
+    // ¿que tal?" podria ser de Argentina, de Venezuela o de Chile.
+    saludoDistinto: true,
+    preguntaPais: '¿De qué país viene Marie?',
     idioma: 'creole',
     idiomaNota: 'Hablan creole, pero está aprendiendo español.',
     tradicion: 'el poul fri, que es pollo frito',
@@ -129,6 +162,8 @@ export const NINOS = [
     pais: 'Venezuela',
     continente: 'América',
     saludo: '¡Hola! Soy Juan Carlos',
+    saludoDistinto: false,
+    preguntaPais: '¿De qué país viene Juan Carlos?',
     idioma: 'español',
     idiomaNota: 'Habla español, igual que en Chile.',
     tradicion: 'las arepas',
@@ -143,10 +178,16 @@ export const NINOS = [
     pais: 'China',
     continente: 'Asia',
     saludo: 'Nǐhǎo',
+    saludoDistinto: true,
+    // Yun nacio en Chile (p.97): "¿de que pais viene?" seria una pregunta mal
+    // hecha. Lo que el libro dice es que sus PADRES son de China.
+    preguntaPais: '¿De qué país son los papás de Yun?',
+    paisNota: 'Yun nació en Chile, pero sus papás son de China.',
     idioma: 'chino',
     idiomaNota: 'Con su familia habla chino, y aprendió muy bien el español.',
-    tradicion: 'el idioma chino en la casa',
-    tipoTradicion: 'idioma',
+    // El libro no le atribuye una comida ni una tradicion: no se pregunta.
+    tradicion: null,
+    tipoTradicion: null,
     extra: 'Nació en Chile; sus padres son de China y se dedican al comercio.',
     color: '#B91C1C',
     icono: '🇨🇳',
@@ -157,6 +198,8 @@ export const NINOS = [
     pais: 'Argentina',
     continente: 'América',
     saludo: 'Hola, ¿qué tal?',
+    saludoDistinto: false,
+    preguntaPais: '¿De qué país viene Facundo?',
     idioma: 'español',
     idiomaNota: 'Habla español, igual que en Chile.',
     tradicion: 'el asado en familia',
@@ -185,6 +228,9 @@ export const AMBITOS = [
   {
     id: 'arte',
     nombre: 'Expresiones artísticas',
+    // La palabra del libro va siempre; la explicacion simple, solo en modo
+    // normal. "Gastronomia" no es una palabra que se sepa a los 7 anos.
+    simple: 'música y baile',
     que: 'La música y la danza de distintos grupos latinoamericanos.',
     ejemplo: 'la salsa, un baile de origen caribeño',
     icono: '💃',
@@ -192,6 +238,7 @@ export const AMBITOS = [
   {
     id: 'gastronomia',
     nombre: 'Gastronomía',
+    simple: 'comidas',
     que: 'Comidas de distintas culturas que aportan diversidad de sabores.',
     ejemplo: 'el ají de gallina, plato típico peruano',
     otros: ['comida peruana', 'comida mexicana', 'comida china', 'comida coreana'],
@@ -200,6 +247,7 @@ export const AMBITOS = [
   {
     id: 'comercio',
     nombre: 'Comercio',
+    simple: 'productos y tiendas',
     que: 'Gran diversidad de productos y servicios.',
     ejemplo: 'los locales con productos chinos',
     otros: ['chinos', 'peruanos', 'venezolanos', 'colombianos'],
@@ -334,10 +382,12 @@ export const AFIRMACIONES = [
      cuando era F. No es una conjetura, es su error real. Por eso este patron
      tiene cuatro afirmaciones y no una: es lo que mas hay que reforzar.      */
   {
-    texto: 'Todos los alemanes que llegaron a Chile se dedicaron a la arquitectura.',
+    // Reemplaza a "Todos los alemanes se dedicaron a la arquitectura", cuya
+    // justificacion mezclaba "a que se dedicaron" con "que aportaron". Esta la
+    // desmiente el propio libro, como la de la p.101: Yun nacio en Chile.
+    texto: 'Marie, Juan Carlos, Yun y Facundo nacieron todos en otro país.',
     verdadero: false,
-    porque: 'Fíjate en la palabra "todos". La arquitectura fue un aporte importante, '
-          + 'pero también aportaron sus comidas y pasteles, como los kuchenes.',
+    porque: 'Fíjate en la palabra "todos". Yun nació en Chile; sus papás son de China.',
     concepto: 'generalizar',
     origen: 'variante',
   },
@@ -352,6 +402,15 @@ export const AFIRMACIONES = [
     origen: 'variante',
   },
 ];
+
+/**
+ * La regla que Marina no aplico en la p.101: marco V en "Todas las personas
+ * inmigrantes tienen dificultades con el idioma", y era F. En modo normal se
+ * muestra como apoyo justo en las frases donde aplica.
+ */
+export const REGLA_TODOS =
+  'Si la frase dice "todos" o "todas", revisa si es cierto para todos. '
+  + 'Si hay uno solo que no, es falsa.';
 
 /* =========================================================================
    6. Pistas de error
