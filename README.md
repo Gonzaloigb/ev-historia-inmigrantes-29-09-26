@@ -38,6 +38,7 @@ npm run dev      # servidor con recarga en vivo
 npm run build    # compila a dist/index.html, en UN solo archivo
 python verificar.py --todos   # prueba de humo en WebKit y Chromium
 python probar_preguntas.py    # que no se repitan preguntas y sean de 2° básico
+python probar_preguntas.py --celular   # lo mismo en WebKit a 360px
 ```
 
 `probar_preguntas.py` juega cada zona varias vueltas y falla si una pregunta se

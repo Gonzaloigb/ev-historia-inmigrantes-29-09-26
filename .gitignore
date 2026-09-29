@@ -3,3 +3,4 @@
 node_modules/
 # Catalogo que genera probar_preguntas.py en cada corrida.
 preguntas.txt
+__pycache__/

@@ -156,6 +156,8 @@ export function correrZona(cfg) {
       }
 
       if (seguir) {
+        // Con foco, para que en el computador baste con Enter.
+        seguir.focus({ preventScroll: true });
         await new Promise((listo) => seguir.addEventListener('click', listo, { once: true }));
       } else {
         await esperar(1100);
